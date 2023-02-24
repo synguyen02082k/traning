@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo '🏗️👷 Styling, testing and building your project before committing';
+
+# Check Prettier standards
+npm run check-format ||
+(
+    echo '🤢🤮🤢🤮 Prettier Check Failed. Please Run npm run format to format the code 🤢🤮🤢🤮';
+    false;
+)
+
+# Check ESLint Standards
+npm run check-lint ||
+(
+    echo '😤🏀👋😤 ESLint Check Failed. Please run npm run check-lint to check for errors 😤🏀👋😤';
+    false;
+)
+
+# Check tsconfig standards
+npm run check-ts ||
+(
+    echo '🤡😂❌🤡 There are some typescript errors, Please run npm run check-ts 🤡😂❌🤡';
+    false;
+)
+
+# If everything passes... Now we can commit
+# echo '🤔🤔🤔🤔... Alright.... Code looks good to me... Trying to build now. 🤔🤔🤔🤔'
+
+# yarn build ||
+# (
+#     echo '❌👷🔨❌ Send Help Build has failed ❌👷🔨❌
+#             Next build failed: View the errors above to see why.
+#     '
+#     false;
+# )
+
+# If everything passes... Now we can commit
+echo '✅✅✅✅ Yo you got this... I am committing this now. ✅✅✅✅';

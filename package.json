@@ -20,7 +20,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "check-ts": "yarn tsc --noUnusedLocals --noUnusedParameters",
+    "check-format": "prettier --check src",
+    "check-lint": "cross-env STRICT_MODE=TRUE eslint \"**/*.{ts,tsx}\"",
+    "lint:fix": "eslint './src/**/*.{ts,tsx}' --fix",
+    "format": "prettier --write src",
+    "prepare": "husky install"
   },
   "eslintConfig": {
     "extends": [
@@ -39,5 +45,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "eslint-plugin-etc": "^2.0.2",
+    "husky": "^8.0.3",
+    "prettier": "^2.8.4"
   }
 }
