@@ -20,6 +20,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test-with-report": "react-scripts test --coverage --coverage --reporters=default --reporters=jest-junit --watchAll=false -w 1",
     "eject": "react-scripts eject",
     "check-ts": "yarn tsc --noUnusedLocals --noUnusedParameters",
     "check-format": "prettier --check src",
@@ -50,6 +51,20 @@
     "cross-env": "^7.0.3",
     "eslint-plugin-etc": "^2.0.2",
     "husky": "^8.0.3",
+    "jest-junit": "^15.0.0",
     "prettier": "^2.8.4"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.[t|j]sx?$": "babel-jest"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!@shotgunjed)/"
+    ],
+    "coveragePathIgnorePatterns": [
+      "src/service/mockdata",
+      "src/config.ts",
+      "src/setupTests.ts"
+    ]
   }
 }
