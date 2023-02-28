@@ -1,0 +1,21 @@
+type User {
+  fullName: String
+  age: Int
+  active: Boolean
+}
+
+type GetAllUser {
+  users: [User]
+  page: Int
+  perPage: Int
+  totalPage: Int
+}
+
+input GetAllUserInput {
+  page: Int
+  perPage: Int
+}
+
+type Query {
+  GetAllUser(input: GetAllUserInput!): GetAllUser
+}
