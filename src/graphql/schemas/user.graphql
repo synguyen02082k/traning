@@ -9,11 +9,18 @@ type GetAllUser {
   page: Int
   perPage: Int
   totalPage: Int
+  totalCount: Int
+}
+
+input Search {
+  keyword: String
+  value: String
 }
 
 input GetAllUserInput {
   page: Int
   perPage: Int
+  search: Search
 }
 
 type Query {

@@ -25,6 +25,7 @@ export type GetAllUser = {
   __typename?: "GetAllUser";
   page?: Maybe<Scalars["Int"]>;
   perPage?: Maybe<Scalars["Int"]>;
+  totalCount?: Maybe<Scalars["Int"]>;
   totalPage?: Maybe<Scalars["Int"]>;
   users?: Maybe<Array<Maybe<User>>>;
 };
@@ -32,6 +33,7 @@ export type GetAllUser = {
 export type GetAllUserInput = {
   page?: InputMaybe<Scalars["Int"]>;
   perPage?: InputMaybe<Scalars["Int"]>;
+  search?: InputMaybe<Search>;
 };
 
 export type Query = {
@@ -41,6 +43,11 @@ export type Query = {
 
 export type QueryGetAllUserArgs = {
   input: GetAllUserInput;
+};
+
+export type Search = {
+  keyword?: InputMaybe<Scalars["String"]>;
+  value?: InputMaybe<Scalars["String"]>;
 };
 
 export type User = {
@@ -61,6 +68,7 @@ export type GetAllUserQuery = {
     page?: number | null;
     perPage?: number | null;
     totalPage?: number | null;
+    totalCount?: number | null;
     users?: Array<{
       __typename?: "User";
       fullName?: string | null;
@@ -82,6 +90,7 @@ export const GetAllUserDocument = gql`
       page
       perPage
       totalPage
+      totalCount
     }
   }
 `;

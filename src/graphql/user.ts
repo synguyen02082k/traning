@@ -14,6 +14,7 @@ query GetAllUser($input: GetAllUserInput!) {
         page
         perPage
         totalPage
+        totalCount
     }
   }
 `;
