@@ -1,12 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import styled from "styled-components";
-import { Icons } from "../../constants/icons";
 import Select, { IOption } from "../Select";
 
 interface IProps {
   searchBy: IOption[];
   onSearch: (value: ISearch) => void;
+  currentSearch: ISearch;
 }
+
+const DONE_TYPING_TIMER = 1000;
 
 export interface ISearch {
   keyword: string | null;
@@ -14,8 +16,9 @@ export interface ISearch {
 }
 
 const TableSearch = (props: IProps) => {
-  const { searchBy, onSearch } = props;
+  const { searchBy, onSearch, currentSearch } = props;
   const defaultKeyword = searchBy[0];
+  const typingTimer = useRef<any>();
 
   const [searchValue, setSearchValue] = useState<ISearch>({
     keyword: defaultKeyword.value as string | null,
@@ -32,7 +35,7 @@ const TableSearch = (props: IProps) => {
   }, []);
 
   const onValueChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
       setSearchValue((prevSearch) => {
         return {
           ...prevSearch,
@@ -47,15 +50,26 @@ const TableSearch = (props: IProps) => {
     onSearch(searchValue);
   }, [onSearch, searchValue]);
 
+  const onKeyDown = useCallback(() => {
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(onSearchSubmit, DONE_TYPING_TIMER);
+  }, [onSearchSubmit]);
+
   return (
     <SearchContainer>
       <SearchByText>Search by:</SearchByText>
       <SearchInput>
-        <Select onChange={onKeywordChange} options={searchBy} />
-        <Input onChange={onValueChange} placeholder="Your key word" />
-        <Icon onClick={onSearchSubmit}>
-          <Image src={Icons.search} />
-        </Icon>
+        <Select
+          onChange={onKeywordChange}
+          options={searchBy}
+          defaultValue={currentSearch.keyword ?? ""}
+        />
+        <Input
+          defaultValue={currentSearch.value ?? ""}
+          onKeyUp={onKeyDown}
+          onChange={onValueChange}
+          placeholder="Your key word"
+        />
       </SearchInput>
     </SearchContainer>
   );
@@ -94,15 +108,4 @@ const Input = styled.input`
     border: none;
     outline: none;
   }
-`;
-
-const Icon = styled.div`
-  display: flex;
-  justify-content: center;
-  height: 100%;
-  padding: 2px;
-`;
-
-const Image = styled.img`
-  display: inline-block;
 `;

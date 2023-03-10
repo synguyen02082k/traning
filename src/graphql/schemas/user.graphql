@@ -1,7 +1,9 @@
+scalar JSON
 type User {
   fullName: String
   age: Int
   active: Boolean
+  _id: String
 }
 
 type GetAllUser {
@@ -25,4 +27,28 @@ input GetAllUserInput {
 
 type Query {
   GetAllUser(input: GetAllUserInput!): GetAllUser
+}
+
+type DeleteUser {
+  user: JSON
+}
+
+input DeleteUserInput {
+  id: String
+}
+
+type Mutation {
+  DeleteUser(input: DeleteUserInput!): DeleteUser
+}
+
+type DeleteUsers {
+  success: JSON
+}
+
+input DeleteUsersInput {
+  ids: String
+}
+
+type Mutation {
+  DeleteUsers(input: DeleteUsersInput!): DeleteUsers
 }

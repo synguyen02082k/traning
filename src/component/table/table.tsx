@@ -3,7 +3,12 @@ import Lottie from "lottie-react";
 import tableLoading from "../../assets/lottei/table_loading.json";
 import Select from "../Select";
 import Pagination from "./pagination";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import useSortArray, { SortType } from "../../hooks/useSortArray";
+import { Icons } from "../../constants/icons";
+import DeleteButton from "../DeleteButton";
+import { isEmpty } from "lodash";
+import shortid from "shortid";
 
 const pageOptions = [
   {
@@ -28,25 +33,74 @@ interface IProps<T, C> {
   perPage: number;
   currentPage: number;
   onSetPerPage: (perPage: number | string) => void;
+  sortBy?: {
+    key: string;
+    type?: SortType;
+  };
+  onSort: (name: string) => void;
+  onDeleteCheckBox: (ids: string[]) => void;
+}
+
+interface IHeaderProps {
+  item: any;
+  onSort: (name: string) => void;
+  isSort: boolean;
+  typeSort?: SortType;
+  haveSort?: boolean;
 }
 
 const Header = ({
   item,
   onSort,
-}: {
-  item: any;
-  onSort: (name: string) => void;
-}) => {
+  typeSort,
+  isSort,
+  haveSort = true,
+}: IHeaderProps) => {
   const onItem = useCallback(() => {
     onSort(item.key);
   }, [item.key, onSort]);
 
   return (
     <TH onClick={onItem} style={{ textAlign: item?.align }}>
-      {item?.label}
+      <Head>
+        {item?.label}
+        {haveSort && (
+          <div>
+            <Image
+              style={{
+                WebkitFilter:
+                  isSort === true && typeSort === SortType.DESC
+                    ? ""
+                    : "invert(50%)",
+              }}
+              src={Icons.arrowDown}
+            />
+            <Image
+              style={{
+                WebkitFilter:
+                  isSort === true && typeSort === SortType.ASC
+                    ? ""
+                    : "invert(50%)",
+              }}
+              src={Icons.arrowUp}
+            />
+          </div>
+        )}
+      </Head>
     </TH>
   );
 };
+
+const CheckBox = ({ value, onChange, checked }: any) => {
+  const onChangeValue = useCallback(() => {
+    onChange(value);
+  }, [onChange, value]);
+
+  return (
+    <Checkbox type="checkbox" checked={checked} onChange={onChangeValue} />
+  );
+};
+
 const TableData = <T, C>(props: IProps<T, C>) => {
   const {
     data,
@@ -57,54 +111,36 @@ const TableData = <T, C>(props: IProps<T, C>) => {
     perPage,
     currentPage,
     onSetPerPage,
+    sortBy,
+    onSort,
+    onDeleteCheckBox,
   } = props ?? {};
 
-  const [tableData, setTableData] = useState<T[]>();
-  const [sortBy, setSortBy] = useState<any>({
-    name: "",
-    ASC: false,
+  const [checkboxes, setCheckboxes] = useState<string[]>([]);
+
+  const { data: tableData } = useSortArray({
+    data,
+    type: sortBy?.type ?? SortType.ASC,
+    sortKey: sortBy?.key ?? "",
   });
 
-  const sortData = useCallback(() => {
-    const { name, ASC } = sortBy;
-    if (name !== "") {
-      const sortData = [...(tableData ?? [])];
-      sortData.sort((a: any, b: any) => {
-        if (a?.[name] > b?.[name]) {
-          return ASC ? 1 : -1;
-        }
-        if (a?.[name] < b?.[name]) {
-          return ASC ? -1 : 1;
-        }
-        return 0;
-      });
-
-      setTableData(sortData);
-    }
-  }, [sortBy, tableData]);
-
-  const onSort = useCallback(
-    (key: string) => {
-      if (key === sortBy.name) {
-        setSortBy((prev: any) => ({
-          ...prev,
-          ASC: !prev.ASC,
-        }));
+  const onChangeCheckbox = useCallback(
+    (value: string) => {
+      const data = [...checkboxes];
+      if (data.includes(value)) {
+        setCheckboxes(data.filter((item) => item !== value));
       } else {
-        setSortBy((prev: any) => ({
-          ...prev,
-          name: key,
-          ASC: false,
-        }));
+        data.push(value);
+        setCheckboxes(data);
       }
-      sortData();
     },
-    [sortBy.name, sortData]
+    [checkboxes]
   );
 
-  useEffect(() => {
-    setTableData(data);
-  }, [data]);
+  const onDeleteCheckboxItem = useCallback(() => {
+    onDeleteCheckBox(checkboxes);
+    setCheckboxes([]);
+  }, [checkboxes, onDeleteCheckBox]);
 
   return (
     <>
@@ -116,36 +152,64 @@ const TableData = <T, C>(props: IProps<T, C>) => {
         />{" "}
         records per page
       </MarginBottom>
+      {!isEmpty(checkboxes) && (
+        <TableAction>
+          <DeleteButton
+            title="Delete all"
+            messageDelete="Are you sure to delete all this users?"
+            id=""
+            onDelete={onDeleteCheckboxItem}
+          />
+        </TableAction>
+      )}
 
       <Table>
-        <TR>
-          <TH>No</TH>
-          {columns?.map((item: any, index) => (
-            <Header item={item} onSort={onSort} key={index} />
-          ))}
-        </TR>
-        {isDataLoading ? (
+        <thead>
           <TR>
-            <TD style={{ textAlign: "center" }} colSpan={4}>
-              <CustomLottie animationData={tableLoading} />
-            </TD>
+            <TH>No</TH>
+            {columns?.map((item: any) => (
+              <Header
+                isSort={sortBy?.key === item.key}
+                typeSort={sortBy?.type}
+                item={item}
+                onSort={onSort}
+                key={shortid.generate()}
+                haveSort={item.haveSoft}
+              />
+            ))}
           </TR>
-        ) : !!tableData ? (
-          tableData?.map((item: any, index) => (
-            <TR key={index} style={{ textAlign: "center" }}>
-              <TD>{index + 1 + perPage * currentPage - perPage}</TD>
-              {columns?.map((column: any, key) => (
-                <TD style={{ textAlign: column?.align }} key={key}>
-                  {column?.renderColumn
-                    ? column?.renderColumn(item[column?.key])
-                    : `${item[column?.key]}`}
-                </TD>
-              ))}
+        </thead>
+        <tbody>
+          {isDataLoading ? (
+            <TR>
+              <TD style={{ textAlign: "center" }} colSpan={columns?.length + 1}>
+                <CustomLottie animationData={tableLoading} />
+              </TD>
             </TR>
-          ))
-        ) : (
-          <TR>No data</TR>
-        )}
+          ) : !!tableData ? (
+            tableData?.map((item: any, index) => (
+              <TR key={shortid.generate()} style={{ textAlign: "center" }}>
+                <TD>
+                  {index + 1 + perPage * currentPage - perPage}{" "}
+                  <CheckBox
+                    value={item?.["_id"]}
+                    onChange={onChangeCheckbox}
+                    checked={checkboxes.includes(item?.["_id"])}
+                  />
+                </TD>
+                {columns?.map((column: any, key) => (
+                  <TD style={{ textAlign: column?.align }} key={key}>
+                    {column?.renderColumn
+                      ? column?.renderColumn(item[column?.key])
+                      : `${item[column?.key]}`}
+                  </TD>
+                ))}
+              </TR>
+            ))
+          ) : (
+            <TR>No data</TR>
+          )}
+        </tbody>
       </Table>
       <Pagination
         currentPage={currentPage}
@@ -165,6 +229,12 @@ const TH = styled.th`
   text-align: left;
   border: 1px solid #dddddd;
   padding: 10px 10px 10px 10px;
+`;
+
+const Head = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const TR = styled.tr`
@@ -191,4 +261,17 @@ const CustomLottie = styled(Lottie)`
 
 const MarginBottom = styled.div`
   margin-bottom: 10px;
+`;
+
+const Image = styled.img`
+  width: 15px;
+  filter: brightness(0.25);
+`;
+
+const Checkbox = styled.input`
+  margin-left: auto;
+`;
+const TableAction = styled.div`
+  margin-top: 20px;
+  margin-bottom: 5px;
 `;

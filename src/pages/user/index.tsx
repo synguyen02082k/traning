@@ -1,26 +1,16 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
 import TableData from "../../component/table/table";
 import Toggle from "../../component/toggle";
-import { useGetAllUserQuery, User } from "../../generated/graphql";
+import {
+  useDeleteUserMutation,
+  useDeleteUsersMutation,
+  useGetAllUserQuery,
+  User,
+} from "../../generated/graphql";
 import { useSearchParams } from "react-router-dom";
 import TableSearch, { ISearch } from "../../component/table/TableSearch";
-
-const columns = [
-  {
-    key: "fullName",
-    label: "Full name",
-  },
-  {
-    key: "age",
-    label: "Age",
-  },
-  {
-    key: "active",
-    label: "Active",
-    align: "center",
-    renderColumn: (value: boolean) => <Toggle status={value} size={18} />,
-  },
-];
+import { SortType } from "../../hooks/useSortArray";
+import DeleteButton from "../../component/DeleteButton";
 
 const searchBy = [
   {
@@ -31,22 +21,31 @@ const searchBy = [
 
 const UserPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [currentPage, setCurrentPage] = useState(1);
+  const [deleteUser] = useDeleteUserMutation();
+  const [deleteManyUser] = useDeleteUsersMutation();
+  const [sortBy, setSortBy] = useState<{ key: string; type?: SortType }>({
+    key: "",
+  });
 
-  const [searchData, setSearchData] = useState<ISearch & { perPage: number }>({
+  const [searchData, setSearchData] = useState<
+    ISearch & { perPage: number; currentPage: number }
+  >({
     keyword: null,
     value: null,
     perPage: 20,
+    currentPage: 1,
   });
 
   const updateSearchData = useCallback(() => {
     const keyword = searchParams.get("searchBy");
     const value = searchParams.get("searchValue");
     const perPage = Number.parseInt(searchParams.get("perPage") ?? "20");
+    const currentPage = Number(searchParams.get("page") ?? "1");
     setSearchData({
       keyword: keyword,
       value: value,
       perPage: perPage,
+      currentPage,
     });
   }, [searchParams]);
 
@@ -54,11 +53,11 @@ const UserPage = () => {
     updateSearchData();
   }, [updateSearchData]);
 
-  const { data, fetchMore, loading } = useGetAllUserQuery({
+  const { data, fetchMore, loading, refetch } = useGetAllUserQuery({
     variables: {
       input: {
         perPage: searchData.perPage,
-        page: 1,
+        page: searchData.currentPage,
         search: {
           keyword: searchData.keyword as string,
           value: searchData.value,
@@ -80,34 +79,136 @@ const UserPage = () => {
       searchParams.delete("page");
       searchParams.delete("perPage");
       searchParams.set("searchBy", value.keyword ?? "");
-      searchParams.set("searchValue", value.value ?? " ");
+      searchParams.set("searchValue", (value.value ?? "").trim());
       setSearchParams(searchParams);
-      setSearchData((prevSearchData) => ({
-        ...prevSearchData,
-        ...value,
-      }));
     },
     [searchParams, setSearchParams]
   );
 
   const setPerPage = useCallback(
     (perPage: number | string) => {
-      searchParams.set("perPage", perPage.toString());
-      setSearchParams(searchParams);
-      setSearchData((prevSearchData) => ({
-        ...prevSearchData,
-        perPage: perPage as number,
-      }));
+      setSearchData((prevSearchData) => {
+        const { currentPage, perPage: currentPerPage } = prevSearchData;
+        const totalPage = Math.ceil(
+          Number(data?.GetAllUser?.totalCount ?? "0") / Number(perPage)
+        );
+
+        const page = Math.round(
+          currentPage === 1
+            ? currentPage
+            : currentPage / (Number(perPage) / currentPerPage)
+        );
+        searchParams.set("perPage", perPage.toString());
+        searchParams.set(
+          "page",
+          (page > totalPage ? 1 : page === 0 ? 1 : page).toString()
+        );
+        setSearchParams(searchParams);
+        return prevSearchData;
+      });
     },
-    [searchParams, setSearchParams]
+    [data?.GetAllUser?.totalCount, searchParams, setSearchParams]
   );
+
+  const onSort = useCallback(
+    (key: string) => {
+      console.log(key);
+
+      if (key === sortBy.key) {
+        setSortBy((prevState) => ({
+          ...prevState,
+          type: sortBy.type === SortType.ASC ? SortType.DESC : SortType.ASC,
+        }));
+      } else {
+        setSortBy({
+          key,
+          type: SortType.ASC,
+        });
+      }
+    },
+    [sortBy.key, sortBy.type]
+  );
+
+  const refetchListData = useCallback(() => {
+    const { keyword, perPage, value } = searchData;
+    refetch({
+      input: {
+        perPage: perPage,
+        page: searchData.currentPage,
+        search: {
+          keyword: keyword as string,
+          value: value,
+        },
+      },
+    });
+  }, [refetch, searchData]);
+
+  const confirmDelete = useCallback(
+    (userId: string) => {
+      deleteUser({
+        variables: {
+          input: {
+            id: userId,
+          },
+        },
+        onCompleted: () => {
+          refetchListData();
+        },
+      });
+    },
+    [deleteUser, refetchListData]
+  );
+
+  const onDeleteManyUser = useCallback(
+    (users: string[]) => {
+      deleteManyUser({
+        variables: {
+          input: {
+            ids: users.join(","),
+          },
+        },
+        onCompleted: () => {
+          refetchListData();
+        },
+      });
+    },
+    [deleteManyUser, refetchListData]
+  );
+
+  const columns = [
+    {
+      key: "fullName",
+      label: "Full name",
+    },
+    {
+      key: "age",
+      label: "Age",
+    },
+    {
+      key: "active",
+      label: "Active",
+      align: "center",
+      renderColumn: (value: boolean) => <Toggle status={value} size={18} />,
+    },
+    {
+      key: "_id",
+      label: "Action",
+      align: "center",
+      renderColumn: (id: string) => (
+        <DeleteButton
+          id={id}
+          messageDelete="Are you sure to delete this user?"
+          onDelete={confirmDelete}
+          title="Delete"
+        />
+      ),
+    },
+  ];
 
   const fetchPageData = useCallback(
     (page: number) => {
       searchParams.set("page", page.toString());
       setSearchParams(searchParams);
-      setCurrentPage(page);
-
       fetchMore({
         variables: {
           input: {
@@ -148,16 +249,23 @@ const UserPage = () => {
 
   return (
     <>
-      <TableSearch onSearch={onSearch} searchBy={searchBy} />
+      <TableSearch
+        onSearch={onSearch}
+        searchBy={searchBy}
+        currentSearch={searchData}
+      />
       <TableData
         isDataLoading={loading}
         data={listUser}
         columns={columns}
         numberPage={totalCount}
         onPage={fetchPageData}
-        currentPage={currentPage}
+        currentPage={Number(searchParams.get("page") ?? "1")}
         perPage={searchData.perPage}
         onSetPerPage={setPerPage}
+        onSort={onSort}
+        sortBy={sortBy}
+        onDeleteCheckBox={onDeleteManyUser}
       />
     </>
   );

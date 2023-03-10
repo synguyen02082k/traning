@@ -19,6 +19,25 @@ export type Scalars = {
   Boolean: boolean;
   Int: number;
   Float: number;
+  JSON: any;
+};
+
+export type DeleteUser = {
+  __typename?: "DeleteUser";
+  user?: Maybe<Scalars["JSON"]>;
+};
+
+export type DeleteUserInput = {
+  id?: InputMaybe<Scalars["String"]>;
+};
+
+export type DeleteUsers = {
+  __typename?: "DeleteUsers";
+  success?: Maybe<Scalars["JSON"]>;
+};
+
+export type DeleteUsersInput = {
+  ids?: InputMaybe<Scalars["String"]>;
 };
 
 export type GetAllUser = {
@@ -34,6 +53,20 @@ export type GetAllUserInput = {
   page?: InputMaybe<Scalars["Int"]>;
   perPage?: InputMaybe<Scalars["Int"]>;
   search?: InputMaybe<Search>;
+};
+
+export type Mutation = {
+  __typename?: "Mutation";
+  DeleteUser?: Maybe<DeleteUser>;
+  DeleteUsers?: Maybe<DeleteUsers>;
+};
+
+export type MutationDeleteUserArgs = {
+  input: DeleteUserInput;
+};
+
+export type MutationDeleteUsersArgs = {
+  input: DeleteUsersInput;
 };
 
 export type Query = {
@@ -52,6 +85,7 @@ export type Search = {
 
 export type User = {
   __typename?: "User";
+  _id?: Maybe<Scalars["String"]>;
   active?: Maybe<Scalars["Boolean"]>;
   age?: Maybe<Scalars["Int"]>;
   fullName?: Maybe<Scalars["String"]>;
@@ -74,8 +108,27 @@ export type GetAllUserQuery = {
       fullName?: string | null;
       age?: number | null;
       active?: boolean | null;
+      _id?: string | null;
     } | null> | null;
   } | null;
+};
+
+export type DeleteUserMutationVariables = Exact<{
+  input: DeleteUserInput;
+}>;
+
+export type DeleteUserMutation = {
+  __typename?: "Mutation";
+  DeleteUser?: { __typename?: "DeleteUser"; user?: any | null } | null;
+};
+
+export type DeleteUsersMutationVariables = Exact<{
+  input: DeleteUsersInput;
+}>;
+
+export type DeleteUsersMutation = {
+  __typename?: "Mutation";
+  DeleteUsers?: { __typename?: "DeleteUsers"; success?: any | null } | null;
 };
 
 export const GetAllUserDocument = gql`
@@ -86,6 +139,7 @@ export const GetAllUserDocument = gql`
         fullName
         age
         active
+        _id
       }
       page
       perPage
@@ -142,4 +196,114 @@ export type GetAllUserLazyQueryHookResult = ReturnType<
 export type GetAllUserQueryResult = Apollo.QueryResult<
   GetAllUserQuery,
   GetAllUserQueryVariables
+>;
+export const DeleteUserDocument = gql`
+  mutation DeleteUser($input: DeleteUserInput!) {
+    DeleteUser(input: $input)
+      @rest(
+        type: "DeleteUser"
+        path: "/user/{args.input.id}"
+        method: "Delete"
+      ) {
+      user
+    }
+  }
+`;
+export type DeleteUserMutationFn = Apollo.MutationFunction<
+  DeleteUserMutation,
+  DeleteUserMutationVariables
+>;
+
+/**
+ * __useDeleteUserMutation__
+ *
+ * To run a mutation, you first call `useDeleteUserMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteUserMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteUserMutation, { data, loading, error }] = useDeleteUserMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useDeleteUserMutation(
+  baseOptions?: Apollo.MutationHookOptions<
+    DeleteUserMutation,
+    DeleteUserMutationVariables
+  >
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return Apollo.useMutation<DeleteUserMutation, DeleteUserMutationVariables>(
+    DeleteUserDocument,
+    options
+  );
+}
+export type DeleteUserMutationHookResult = ReturnType<
+  typeof useDeleteUserMutation
+>;
+export type DeleteUserMutationResult =
+  Apollo.MutationResult<DeleteUserMutation>;
+export type DeleteUserMutationOptions = Apollo.BaseMutationOptions<
+  DeleteUserMutation,
+  DeleteUserMutationVariables
+>;
+export const DeleteUsersDocument = gql`
+  mutation DeleteUsers($input: DeleteUsersInput!) {
+    DeleteUsers(input: $input)
+      @rest(
+        type: "DeleteUsers"
+        path: "/users/{args.input.ids}"
+        method: "Delete"
+      ) {
+      success
+    }
+  }
+`;
+export type DeleteUsersMutationFn = Apollo.MutationFunction<
+  DeleteUsersMutation,
+  DeleteUsersMutationVariables
+>;
+
+/**
+ * __useDeleteUsersMutation__
+ *
+ * To run a mutation, you first call `useDeleteUsersMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteUsersMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteUsersMutation, { data, loading, error }] = useDeleteUsersMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useDeleteUsersMutation(
+  baseOptions?: Apollo.MutationHookOptions<
+    DeleteUsersMutation,
+    DeleteUsersMutationVariables
+  >
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return Apollo.useMutation<DeleteUsersMutation, DeleteUsersMutationVariables>(
+    DeleteUsersDocument,
+    options
+  );
+}
+export type DeleteUsersMutationHookResult = ReturnType<
+  typeof useDeleteUsersMutation
+>;
+export type DeleteUsersMutationResult =
+  Apollo.MutationResult<DeleteUsersMutation>;
+export type DeleteUsersMutationOptions = Apollo.BaseMutationOptions<
+  DeleteUsersMutation,
+  DeleteUsersMutationVariables
 >;

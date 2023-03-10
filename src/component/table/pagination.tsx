@@ -4,6 +4,7 @@ import { DOTS } from "../../constants/constant";
 import classnames from "classnames";
 import "./pagination.scss";
 import styled from "styled-components";
+import shortid from "shortid";
 
 interface IPaginationProps {
   onPageChange: (page: number) => void;
@@ -77,10 +78,10 @@ const Pagination = (props: IPaginationProps) => {
       >
         <div className="arrow left" />
       </CustomLi>
-      {paginationRange?.map((pageNumber, index) => {
+      {paginationRange?.map((pageNumber) => {
         if (pageNumber === DOTS) {
           return (
-            <CustomLi key={index} className="pagination-item dots">
+            <CustomLi key={shortid.generate()} className="pagination-item dots">
               &#8230;
             </CustomLi>
           );
@@ -88,7 +89,7 @@ const Pagination = (props: IPaginationProps) => {
 
         return (
           <Li
-            key={index}
+            key={shortid.generate()}
             selected={pageNumber === currentPage}
             onPageChange={onPageChange}
             pageNumber={pageNumber as number}

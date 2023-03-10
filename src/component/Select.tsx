@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import styled from "styled-components";
+import shortid from "shortid";
 
 export interface IOption {
   value: string | number;
@@ -22,9 +23,9 @@ const Select = (props: IProps) => {
   );
 
   return (
-    <SelectContainer defaultValue={defaultValue} onChange={onChangeOption}>
-      {options.map((option, index) => (
-        <Option key={index} value={option.value}>
+    <SelectContainer value={defaultValue} onChange={onChangeOption}>
+      {options.map((option) => (
+        <Option key={shortid.generate()} value={option.value}>
           {option.title}
         </Option>
       ))}
