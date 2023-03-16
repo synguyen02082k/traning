@@ -98,8 +98,7 @@ const Pagination = (props: IPaginationProps) => {
       })}
       <CustomLi
         className={classnames("pagination-item", {
-          disabled:
-            currentPage === lastPage || (paginationRange?.length ?? 0) > 1,
+          disabled: currentPage === lastPage,
         })}
         onClick={onNext}
       >

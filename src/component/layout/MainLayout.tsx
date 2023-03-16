@@ -1,7 +1,5 @@
 import Navbar from "./navbar";
 import styled from "styled-components";
-import AppRouter from "../../navigation/AppRouter";
-import { BrowserRouter } from "react-router-dom";
 
 const Wrapper = styled.div`
   display: flex;
@@ -13,15 +11,11 @@ const MainContent = styled.div`
   overflow-x: scroll;
 `;
 
-export default function MainLayout() {
+export default function MainLayout({ children }: any) {
   return (
-    <BrowserRouter>
-      <Wrapper>
-        <Navbar />
-        <MainContent>
-          <AppRouter />
-        </MainContent>
-      </Wrapper>
-    </BrowserRouter>
+    <Wrapper>
+      <Navbar />
+      <MainContent>{children}</MainContent>
+    </Wrapper>
   );
 }

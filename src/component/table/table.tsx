@@ -2,9 +2,8 @@ import styled from "styled-components";
 import Lottie from "lottie-react";
 import tableLoading from "../../assets/lottei/table_loading.json";
 import Select from "../Select";
-import Pagination from "./pagination";
 import { useCallback, useState } from "react";
-import useSortArray, { SortType } from "../../hooks/useSortArray";
+import { SortType } from "../../hooks/useSortArray";
 import { Icons } from "../../constants/icons";
 import DeleteButton from "../DeleteButton";
 import { isEmpty } from "lodash";
@@ -37,50 +36,41 @@ interface IProps<T, C> {
     key: string;
     type?: SortType;
   };
-  onSort: (name: string) => void;
+  onSort: (name: any) => void;
   onDeleteCheckBox: (ids: string[]) => void;
+  sort: any;
 }
 
 interface IHeaderProps {
   item: any;
   onSort: (name: string) => void;
-  isSort: boolean;
-  typeSort?: SortType;
+  typeSort?: number;
   haveSort?: boolean;
 }
 
-const Header = ({
-  item,
-  onSort,
-  typeSort,
-  isSort,
-  haveSort = true,
-}: IHeaderProps) => {
+const Header = ({ item, onSort, typeSort, haveSort = true }: IHeaderProps) => {
   const onItem = useCallback(() => {
     onSort(item.key);
   }, [item.key, onSort]);
 
   return (
-    <TH onClick={onItem} style={{ textAlign: item?.align }}>
+    <TH
+      onClick={haveSort ? onItem : undefined}
+      style={{ textAlign: item?.align }}
+    >
       <Head>
         {item?.label}
         {haveSort && (
           <div>
             <Image
               style={{
-                WebkitFilter:
-                  isSort === true && typeSort === SortType.DESC
-                    ? ""
-                    : "invert(50%)",
+                WebkitFilter: typeSort === -1 ? "" : "invert(50%)",
               }}
               src={Icons.arrowDown}
             />
             <Image
               style={{
-                WebkitFilter:
-                  isSort === true && typeSort === SortType.ASC
-                    ? ""
-                    : "invert(50%)",
+                WebkitFilter: typeSort === 1 ? "" : "invert(50%)",
               }}
               src={Icons.arrowUp}
             />
@@ -105,24 +95,16 @@ const TableData = <T, C>(props: IProps<T, C>) => {
   const {
     data,
     columns,
-    numberPage,
-    onPage,
     isDataLoading = false,
     perPage,
     currentPage,
     onSetPerPage,
-    sortBy,
     onSort,
     onDeleteCheckBox,
+    sort,
   } = props ?? {};
 
   const [checkboxes, setCheckboxes] = useState<string[]>([]);
-
-  const { data: tableData } = useSortArray({
-    data,
-    type: sortBy?.type ?? SortType.ASC,
-    sortKey: sortBy?.key ?? "",
-  });
 
   const onChangeCheckbox = useCallback(
     (value: string) => {
@@ -169,25 +151,18 @@ const TableData = <T, C>(props: IProps<T, C>) => {
             <TH>No</TH>
             {columns?.map((item: any) => (
               <Header
-                isSort={sortBy?.key === item.key}
-                typeSort={sortBy?.type}
+                typeSort={sort?.[item.key]}
                 item={item}
                 onSort={onSort}
                 key={shortid.generate()}
-                haveSort={item.haveSoft}
+                haveSort={item.haveSort}
               />
             ))}
           </TR>
         </thead>
-        <tbody>
-          {isDataLoading ? (
-            <TR>
-              <TD style={{ textAlign: "center" }} colSpan={columns?.length + 1}>
-                <CustomLottie animationData={tableLoading} />
-              </TD>
-            </TR>
-          ) : !!tableData ? (
-            tableData?.map((item: any, index) => (
+        <tbody style={{ position: "relative" }}>
+          {!!data ? (
+            data?.map((item: any, index) => (
               <TR key={shortid.generate()} style={{ textAlign: "center" }}>
                 <TD>
                   {index + 1 + perPage * currentPage - perPage}{" "}
@@ -209,15 +184,21 @@ const TableData = <T, C>(props: IProps<T, C>) => {
           ) : (
             <TR>No data</TR>
           )}
+          <TR>
+            {isDataLoading && (
+              <Loading
+                colSpan={columns.length + 1}
+                style={{
+                  position: !!data.length ? "absolute" : "relative",
+                  display: !!data.length ? "" : "table-cell",
+                }}
+              >
+                <CustomLottie animationData={tableLoading} />
+              </Loading>
+            )}
+          </TR>
         </tbody>
       </Table>
-      <Pagination
-        currentPage={currentPage}
-        onPageChange={onPage}
-        pageSize={perPage}
-        totalCount={numberPage}
-        siblingCount={2}
-      />
     </>
   );
 };
@@ -251,6 +232,7 @@ const Table = styled.table`
   text-align: left;
   width: 100%;
   border-collapse: collapse;
+  border: 1px solid #dddddd;
 `;
 const CustomLottie = styled(Lottie)`
   margin-left: auto;
@@ -274,4 +256,16 @@ const Checkbox = styled.input`
 const TableAction = styled.div`
   margin-top: 20px;
   margin-bottom: 5px;
+`;
+
+const Loading = styled.td`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  background-color: gray;
+  opacity: 0.3;
 `;

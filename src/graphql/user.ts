@@ -45,3 +45,16 @@ mutation DeleteUsers($input: DeleteUsersInput!) {
     }
   }
 `;
+
+export const createUser = /*GraphQL*/ `
+mutation CreateUser($input: CreateUserInput!) {
+    CreateUser(input: $input) 
+    @rest(
+        type: "CreateUser", 
+        path: "/users",
+        method: "Post"
+    ){
+        user
+    }
+  }
+`;

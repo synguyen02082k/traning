@@ -27,7 +27,7 @@ export default function DeleteButton(props: IDeleteButtonProps) {
       <Dialog
         enable={showDialog}
         title="Confirm the action?"
-        message={messageDelete}
+        body={messageDelete}
         onConfirm={onConfirm}
         confirmText="Confirm"
         onCancel={handleDialog}
@@ -42,4 +42,5 @@ const Button = styled.button`
   padding: 5px 10px 5px 10px;
   border: none;
   border-radius: 5px;
+  cursor: pointer;
 `;

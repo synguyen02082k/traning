@@ -1,9 +1,9 @@
 import "./App.css";
-import MainLayout from "./component/layout/MainLayout";
+import AppRouter from "./navigation/AppRouter";
 import "./styles/global";
 
 function App() {
-  return <MainLayout />;
+  return <AppRouter />;
 }
 
 export default App;

@@ -9,8 +9,13 @@ import {
 } from "../../generated/graphql";
 import { useSearchParams } from "react-router-dom";
 import TableSearch, { ISearch } from "../../component/table/TableSearch";
-import { SortType } from "../../hooks/useSortArray";
-import DeleteButton from "../../component/DeleteButton";
+import UserForm from "./UserForm";
+import CustomButton from "../../component/form/button";
+import styled from "styled-components";
+import TableAction from "../../component/table/TableAction";
+import Dialog from "../../component/dialog";
+import { toast } from "react-toastify";
+import Pagination from "../../component/table/pagination";
 
 const searchBy = [
   {
@@ -20,50 +25,74 @@ const searchBy = [
 ];
 
 const UserPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [deleteUser] = useDeleteUserMutation();
-  const [deleteManyUser] = useDeleteUsersMutation();
-  const [sortBy, setSortBy] = useState<{ key: string; type?: SortType }>({
-    key: "",
+  const [userDialog, setUserDialog] = useState<{
+    userId?: string | null;
+    enable: boolean;
+  }>({
+    userId: null,
+    enable: false,
   });
+  const [formDetailHandle, setFormDetail] = useState<{
+    enable: boolean;
+    userId?: string | null;
+  }>({
+    enable: false,
+    userId: null,
+  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pageParams] = useState(searchParams.get("page"));
 
+  const [deleteUser, { loading: deleteLoading }] = useDeleteUserMutation();
+  const [deleteManyUser] = useDeleteUsersMutation();
   const [searchData, setSearchData] = useState<
-    ISearch & { perPage: number; currentPage: number }
+    ISearch & { perPage: number; currentPage: number; sort?: ISort }
   >({
     keyword: null,
     value: null,
     perPage: 20,
-    currentPage: 1,
+    currentPage: 0,
   });
 
   const updateSearchData = useCallback(() => {
     const keyword = searchParams.get("searchBy");
     const value = searchParams.get("searchValue");
     const perPage = Number.parseInt(searchParams.get("perPage") ?? "20");
-    const currentPage = Number(searchParams.get("page") ?? "1");
-    setSearchData({
+    const page = Number.parseInt(searchParams.get("page") ?? "1");
+    setSearchData((prev) => ({
+      ...prev,
       keyword: keyword,
       value: value,
       perPage: perPage,
-      currentPage,
-    });
+      currentPage: page,
+    }));
   }, [searchParams]);
 
   useEffect(() => {
     updateSearchData();
   }, [updateSearchData]);
 
+  useEffect(() => {
+    if (searchData.currentPage === 0) {
+      const currentPage = Number(searchParams.get("page") ?? "1");
+      setSearchData((prev) => ({
+        ...prev,
+        currentPage,
+      }));
+    }
+  }, [searchData.currentPage, searchParams]);
+
   const { data, fetchMore, loading, refetch } = useGetAllUserQuery({
     variables: {
       input: {
         perPage: searchData.perPage,
-        page: searchData.currentPage,
+        page: Number(pageParams ?? "1"),
         search: {
           keyword: searchData.keyword as string,
           value: searchData.value,
         },
       },
     },
+    notifyOnNetworkStatusChange: true,
   });
 
   const listUser: User[] = useMemo(() => {
@@ -73,6 +102,13 @@ const UserPage = () => {
   const totalCount = useMemo(() => {
     return data?.["GetAllUser"]?.totalCount as number;
   }, [data]);
+
+  const handleDialog = useCallback((userId?: string) => {
+    setUserDialog((prev) => ({
+      enable: !prev.enable,
+      userId: userId,
+    }));
+  }, []);
 
   const onSearch = useCallback(
     (value: ISearch) => {
@@ -110,25 +146,6 @@ const UserPage = () => {
     [data?.GetAllUser?.totalCount, searchParams, setSearchParams]
   );
 
-  const onSort = useCallback(
-    (key: string) => {
-      console.log(key);
-
-      if (key === sortBy.key) {
-        setSortBy((prevState) => ({
-          ...prevState,
-          type: sortBy.type === SortType.ASC ? SortType.DESC : SortType.ASC,
-        }));
-      } else {
-        setSortBy({
-          key,
-          type: SortType.ASC,
-        });
-      }
-    },
-    [sortBy.key, sortBy.type]
-  );
-
   const refetchListData = useCallback(() => {
     const { keyword, perPage, value } = searchData;
     refetch({
@@ -139,25 +156,40 @@ const UserPage = () => {
           keyword: keyword as string,
           value: value,
         },
+        sort: searchData.sort,
       },
     });
   }, [refetch, searchData]);
 
-  const confirmDelete = useCallback(
-    (userId: string) => {
-      deleteUser({
-        variables: {
-          input: {
-            id: userId,
-          },
+  const confirmDelete = useCallback(() => {
+    deleteUser({
+      variables: {
+        input: {
+          id: userDialog.userId,
         },
-        onCompleted: () => {
-          refetchListData();
-        },
-      });
-    },
-    [deleteUser, refetchListData]
-  );
+      },
+      onCompleted: () => {
+        refetchListData();
+        handleDialog();
+        toast("Delete user success!", {
+          type: "success",
+        });
+      },
+      onError: () => {
+        handleDialog();
+        toast("Can't delete this user!", {
+          type: "error",
+        });
+      },
+    });
+  }, [deleteUser, handleDialog, refetchListData, userDialog.userId]);
+
+  const onEdit = useCallback((userId: string) => {
+    setFormDetail({
+      enable: true,
+      userId: userId,
+    });
+  }, []);
 
   const onDeleteManyUser = useCallback(
     (users: string[]) => {
@@ -175,6 +207,12 @@ const UserPage = () => {
     [deleteManyUser, refetchListData]
   );
 
+  const handleEnableForm = useCallback(() => {
+    setFormDetail((prevDetail) => ({
+      enable: !prevDetail.enable,
+    }));
+  }, []);
+
   const columns = [
     {
       key: "fullName",
@@ -187,20 +225,17 @@ const UserPage = () => {
     {
       key: "active",
       label: "Active",
+      haveSort: false,
       align: "center",
       renderColumn: (value: boolean) => <Toggle status={value} size={18} />,
     },
     {
       key: "_id",
       label: "Action",
+      haveSort: false,
       align: "center",
       renderColumn: (id: string) => (
-        <DeleteButton
-          id={id}
-          messageDelete="Are you sure to delete this user?"
-          onDelete={confirmDelete}
-          title="Delete"
-        />
+        <TableAction rowId={id} onDelete={handleDialog} onEdit={onEdit} />
       ),
     },
   ];
@@ -218,6 +253,7 @@ const UserPage = () => {
               value: searchData.value,
             },
             page,
+            sort: searchData.sort,
           },
         },
         updateQuery: (previousQueryResult, { fetchMoreResult }) => {
@@ -247,14 +283,42 @@ const UserPage = () => {
     [fetchMore, searchData, searchParams, setSearchParams]
   );
 
+  const onSort = useCallback((key: "age" | "fullName") => {
+    setSearchData((prevSearch) => {
+      const sortValue = prevSearch.sort?.[key];
+      return {
+        ...prevSearch,
+        sort: {
+          ...prevSearch.sort,
+          [key]: sortValue === 1 ? -1 : sortValue === -1 ? undefined : 1,
+        },
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (searchData.sort !== undefined) {
+      fetchPageData(Number(searchParams.get("page") ?? "1"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchData.sort]);
+
   return (
-    <>
-      <TableSearch
-        onSearch={onSearch}
-        searchBy={searchBy}
-        currentSearch={searchData}
-      />
+    <div>
+      <HeadTable>
+        <ButtonWrap>
+          <CustomButton onClick={handleEnableForm} buttonType="info">
+            New User
+          </CustomButton>
+        </ButtonWrap>
+        <TableSearch
+          onSearch={onSearch}
+          searchBy={searchBy}
+          currentSearch={searchData}
+        />
+      </HeadTable>
       <TableData
+        sort={searchData.sort}
         isDataLoading={loading}
         data={listUser}
         columns={columns}
@@ -264,11 +328,52 @@ const UserPage = () => {
         perPage={searchData.perPage}
         onSetPerPage={setPerPage}
         onSort={onSort}
-        sortBy={sortBy}
         onDeleteCheckBox={onDeleteManyUser}
       />
-    </>
+      <Pagination
+        currentPage={Number(searchParams.get("page") ?? "1")}
+        onPageChange={fetchPageData}
+        pageSize={searchData.perPage}
+        totalCount={totalCount}
+        siblingCount={1}
+      />
+      {formDetailHandle.enable === true && (
+        <UserForm
+          onCancel={handleEnableForm}
+          onSuccess={refetchListData}
+          userId={formDetailHandle.userId}
+        />
+      )}
+
+      <Dialog
+        isLoading={deleteLoading}
+        enable={userDialog.enable}
+        title="Confirm the action?"
+        body="Are you sure to delete this user?"
+        onConfirm={confirmDelete}
+        confirmText="Confirm"
+        onCancel={handleDialog}
+      />
+    </div>
   );
 };
 
 export default UserPage;
+
+//styled
+const HeadTable = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`;
+
+const ButtonWrap = styled.div`
+  align-items: center;
+  display: flex;
+`;
+
+//
+interface ISort {
+  fullName?: number;
+  age?: number;
+}

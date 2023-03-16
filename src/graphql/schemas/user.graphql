@@ -23,6 +23,7 @@ input GetAllUserInput {
   page: Int
   perPage: Int
   search: Search
+  sort: JSON
 }
 
 type Query {
@@ -51,4 +52,19 @@ input DeleteUsersInput {
 
 type Mutation {
   DeleteUsers(input: DeleteUsersInput!): DeleteUsers
+}
+
+type CreateUser {
+  user: JSON
+}
+
+input CreateUserInput {
+  fullName: String
+  DOB: String
+  division: String
+  active: Boolean
+}
+
+type Mutation {
+  CreateUser(input: CreateUserInput!): CreateUser
 }
