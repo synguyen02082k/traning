@@ -4,7 +4,6 @@ import Toggle from "../../component/toggle";
 import {
   useDeleteUserMutation,
   useDeleteUsersMutation,
-  useGetAllUserQuery,
   User,
 } from "../../generated/graphql";
 import { useSearchParams } from "react-router-dom";
@@ -16,6 +15,8 @@ import TableAction from "../../component/table/TableAction";
 import Dialog from "../../component/dialog";
 import { toast } from "react-toastify";
 import Pagination from "../../component/table/pagination";
+import { useInfiniteQuery } from "react-query";
+import { getUsers, UsersQueryParams } from "../../services/api/user.api";
 
 const searchBy = [
   {
@@ -81,26 +82,45 @@ const UserPage = () => {
     }
   }, [searchData.currentPage, searchParams]);
 
-  const { data, fetchMore, loading, refetch } = useGetAllUserQuery({
-    variables: {
-      input: {
+  const {
+    data: users,
+    fetchNextPage,
+    refetch: refetchUser,
+    isFetching,
+    isLoading,
+  } = useInfiniteQuery<
+    UsersResponse,
+    UsersQueryParams,
+    UsersFetchNextPageParams
+  >(
+    "users",
+    ({ pageParam }: { pageParam?: any }) =>
+      getUsers({
+        pageParam: pageParam ?? Number(pageParams ?? "1"),
         perPage: searchData.perPage,
-        page: Number(pageParams ?? "1"),
         search: {
           keyword: searchData.keyword as string,
           value: searchData.value,
         },
-      },
-    },
-    notifyOnNetworkStatusChange: true,
-  });
+      }),
+    {
+      enabled: !!searchData,
+    }
+  );
+
+  const loading = isFetching || isLoading;
+
+  const data: UsersFetchNextPageParams = useMemo(
+    () => users?.pages?.[users?.pages.length - 1] ?? [],
+    [users?.pages]
+  );
 
   const listUser: User[] = useMemo(() => {
-    return (data?.["GetAllUser"]?.users ?? []) as User[];
+    return data?.users ?? [];
   }, [data]);
 
   const totalCount = useMemo(() => {
-    return data?.["GetAllUser"]?.totalCount as number;
+    return data?.totalCount;
   }, [data]);
 
   const handleDialog = useCallback((userId?: string) => {
@@ -110,6 +130,20 @@ const UserPage = () => {
     }));
   }, []);
 
+  const refetchListData = useCallback(() => {
+    const { keyword, perPage, value } = searchData;
+    const params: any = {
+      perPage: perPage,
+      pageParams: searchData.currentPage,
+      search: {
+        keyword: keyword as string,
+        value: value,
+      },
+      sort: searchData.sort,
+    };
+    refetchUser(params);
+  }, [refetchUser, searchData]);
+
   const onSearch = useCallback(
     (value: ISearch) => {
       searchParams.delete("page");
@@ -117,8 +151,9 @@ const UserPage = () => {
       searchParams.set("searchBy", value.keyword ?? "");
       searchParams.set("searchValue", (value.value ?? "").trim());
       setSearchParams(searchParams);
+      refetchListData();
     },
-    [searchParams, setSearchParams]
+    [refetchListData, searchParams, setSearchParams]
   );
 
   const setPerPage = useCallback(
@@ -126,7 +161,7 @@ const UserPage = () => {
       setSearchData((prevSearchData) => {
         const { currentPage, perPage: currentPerPage } = prevSearchData;
         const totalPage = Math.ceil(
-          Number(data?.GetAllUser?.totalCount ?? "0") / Number(perPage)
+          Number(data?.totalCount ?? "0") / Number(perPage)
         );
 
         const page = Math.round(
@@ -142,24 +177,12 @@ const UserPage = () => {
         setSearchParams(searchParams);
         return prevSearchData;
       });
+      refetchUser();
     },
-    [data?.GetAllUser?.totalCount, searchParams, setSearchParams]
+    [data?.totalCount, refetchUser, searchParams, setSearchParams]
   );
 
-  const refetchListData = useCallback(() => {
-    const { keyword, perPage, value } = searchData;
-    refetch({
-      input: {
-        perPage: perPage,
-        page: searchData.currentPage,
-        search: {
-          keyword: keyword as string,
-          value: value,
-        },
-        sort: searchData.sort,
-      },
-    });
-  }, [refetch, searchData]);
+  
 
   const confirmDelete = useCallback(() => {
     deleteUser({
@@ -244,43 +267,28 @@ const UserPage = () => {
     (page: number) => {
       searchParams.set("page", page.toString());
       setSearchParams(searchParams);
-      fetchMore({
-        variables: {
-          input: {
-            perPage: searchData.perPage,
-            search: {
-              keyword: searchData.keyword,
-              value: searchData.value,
-            },
-            page,
-            sort: searchData.sort,
-          },
+      const params: UsersFetchNextPageParams = {
+        perPage: searchData.perPage,
+        search: {
+          keyword: searchData.keyword,
+          value: searchData.value,
         },
-        updateQuery: (previousQueryResult, { fetchMoreResult }) => {
-          const _typename = previousQueryResult.__typename;
-          const {
-            page,
-            perPage,
-            totalPage,
-            totalCount,
-            users: fetchMoreUsers,
-            __typename,
-          } = fetchMoreResult.GetAllUser ?? {};
-          return {
-            __typename: _typename,
-            GetAllUser: {
-              __typename,
-              page,
-              perPage,
-              totalPage,
-              totalCount,
-              users: fetchMoreUsers,
-            },
-          };
-        },
+        sort: searchData.sort,
+      };
+      fetchNextPage({
+        ...params,
+        pageParam: page,
       });
     },
-    [fetchMore, searchData, searchParams, setSearchParams]
+    [
+      fetchNextPage,
+      searchData.keyword,
+      searchData.perPage,
+      searchData.sort,
+      searchData.value,
+      searchParams,
+      setSearchParams,
+    ]
   );
 
   const onSort = useCallback((key: "age" | "fullName") => {
@@ -297,11 +305,11 @@ const UserPage = () => {
   }, []);
 
   useEffect(() => {
-    if (searchData.sort !== undefined) {
+    if (searchData.sort !== undefined && !isFetching && !isLoading) {
       fetchPageData(Number(searchParams.get("page") ?? "1"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchData.sort]);
+  }, [isFetching, isLoading, searchData.sort]);
 
   return (
     <div>
@@ -322,7 +330,7 @@ const UserPage = () => {
         isDataLoading={loading}
         data={listUser}
         columns={columns}
-        numberPage={totalCount}
+        numberPage={totalCount ?? 0}
         onPage={fetchPageData}
         currentPage={Number(searchParams.get("page") ?? "1")}
         perPage={searchData.perPage}
@@ -334,7 +342,7 @@ const UserPage = () => {
         currentPage={Number(searchParams.get("page") ?? "1")}
         onPageChange={fetchPageData}
         pageSize={searchData.perPage}
-        totalCount={totalCount}
+        totalCount={totalCount ?? 0}
         siblingCount={1}
       />
       {formDetailHandle.enable === true && (
@@ -376,4 +384,18 @@ const ButtonWrap = styled.div`
 interface ISort {
   fullName?: number;
   age?: number;
+}
+
+interface UsersFetchNextPageParams {
+  search?: any;
+  sort?: any;
+  perPage?: number;
+  totalCount?: number;
+  users?: User[];
+}
+
+export interface UsersResponse {
+  page?: number;
+  totalCount: number;
+  users: User;
 }

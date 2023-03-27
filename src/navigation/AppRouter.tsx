@@ -1,3 +1,4 @@
+import { useQuery } from "react-query";
 import {
   BrowserRouter,
   Navigate,
@@ -9,17 +10,21 @@ import MainLayout from "../component/layout/MainLayout";
 import Dashboard from "../pages";
 import Login from "../pages/login";
 import UserPage from "../pages/user";
+import { getMe } from "../services/api/user.api";
 
 const ProtectedRoute = ({ children }: any) => {
-  const user = localStorage.getItem("user");
-  if (!user) {
+  const token = localStorage.getItem("token");
+   useQuery("me", getMe, {
+    enabled: false,
+  });
+  if (!token) {
     return <Navigate to={"/login"} replace />;
   }
   return children ? children : <Outlet />;
 };
 const PublicRoute = ({ children }: any) => {
-  const user = localStorage.getItem("user");
-  if (user) {
+  const token = localStorage.getItem("token");
+  if (token) {
     return <Navigate to={"/users"} replace />;
   }
   return children ? children : <Outlet />;
